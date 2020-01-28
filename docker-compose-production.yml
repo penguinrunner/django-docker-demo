@@ -1,0 +1,49 @@
+version: '3.7'
+services:
+
+  web:
+    image: penguinrunner/test-repo-docker
+#    build:
+#      context: ./testapp
+#      dockerfile: Dockerfile
+    command: gunicorn testapp.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - static_volume:/app/static
+    entrypoint:
+      - /app/entrypoint.sh
+    expose:
+      - 8000
+    depends_on:
+      - postgresdb
+
+  nginx:
+    build: ./nginx
+    volumes:
+      - 'static_volume:/app/static'
+    ports:
+      - '9000:80'
+    depends_on:
+      - web
+
+  postgres:
+    image: postgres
+    restart: always
+    volumes:
+      - 'database_volume:/var/lib/postgresql/data'
+    expose:
+      - 5432
+    environment:
+      POSTGRES_USER: groot
+      POSTGRES_PASSWORD: iamgroot
+      POSTGRES_DB: testapp_database
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '/root/.docker/config.json:/config.json'
+    command: -d --interval 30
+
+volumes:
+  database_volume:
+  static_volume:
